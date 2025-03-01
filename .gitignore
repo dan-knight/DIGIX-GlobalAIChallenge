@@ -1,0 +1,7 @@
+.venv
+.env
+*.ipynb
+*.egg-info
+build/
+dist/
+**/.DS_Store
