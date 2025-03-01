@@ -1,4 +1,6 @@
 .venv
 .env
 *.ipynb
-
+*.egg-info
+build/
+dist/
