@@ -14,20 +14,22 @@ class NeuralNetwork(nn.Module):
         output_d: int,
         hidden_d: int,
         num_layers: int,
+        activation: "nn.Module"
     ):
         super().__init__()  # pyright: ignore[reportUnknownMemberType]
         
-        layers: list[nn.Module] = []
-        for _ in range(num_layers):
-            layers.extend([nn.Linear(hidden_d, hidden_d), nn.ReLU()])
-        self.layers = nn.Sequential(
-            nn.Linear(input_d, hidden_d),
-            nn.ReLU(),
-            *layers,
-            nn.Linear(hidden_d, output_d)
-        )
+        self.input_projection = nn.Linear(input_d, hidden_d)
+        self.hidden_layers: list[nn.Module] = [
+            *[nn.Linear(hidden_d, hidden_d) for _ in range(num_layers)]
+        ]
+        self.activation = activation
+        self.output_projection = nn.Linear(hidden_d, output_d)
 
     def forward(self, inputs: "Tensor"):
         x = torch.flatten(inputs, 1)
-        return self.layers(x)
+        x = self.activation(self.input_projection(x))
+        for layer in self.hidden_layers:
+            x = self.activation(x + layer(x))
+        output = self.output_projection(x)
+        return output
     
