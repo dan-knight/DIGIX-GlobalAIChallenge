@@ -6,18 +6,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 
 
-################################################################################################
-# Helper Functions
-################################################################################################
-
-
 def merge_data(feeds: pd.DataFrame, ads: pd.DataFrame) -> pd.DataFrame:
 
     feeds['total_clicks_numeric'] = feeds['u_click_ca2_news'].apply(
-      lambda s: sum(int(i) for i in s.split('^')) if isinstance(s, str) else 0
+        lambda s: sum(int(i) for i in s.split('^')) if isinstance(s, str) else 0
     )
 
-    # aggregate news feed by user
     aggregated_feeds = feeds.groupby('u_userId').agg(
         total_impressions=('u_userId', 'count'),
         total_clicks=('total_clicks_numeric', 'sum'),
@@ -38,17 +32,19 @@ def merge_data(feeds: pd.DataFrame, ads: pd.DataFrame) -> pd.DataFrame:
     merged['pt_d_year'] = merged['pt_d'].dt.year
     merged['pt_d_month'] = merged['pt_d'].dt.month
 
-    # missing values for numeric cols
-    merged.fillna({
-        'total_clicks': 0,
-        'total_impressions': 0,
-        'avg_refresh_times': merged['avg_refresh_times'].median(),
-        'total_dislikes': 0,
-        'total_upvotes': 0,
-        'category_diversity': 0,
-        'ctr': 0,
-        'most_common_category': 'unknown' #Add fill value
-    }, inplace=True)
+    merged.fillna(
+        {
+            'total_clicks': 0,
+            'total_impressions': 0,
+            'avg_refresh_times': merged['avg_refresh_times'].median(),
+            'total_dislikes': 0,
+            'total_upvotes': 0,
+            'category_diversity': 0,
+            'ctr': 0,
+            'most_common_category': 'unknown'
+        },
+        inplace=True
+    )
 
     return merged
 
@@ -66,20 +62,12 @@ def split_data(data: pd.DataFrame, split: float=0.9) -> tuple[pd.DataFrame, pd.D
 
 
 def clean_numeric_data(X: pd.DataFrame) -> pd.DataFrame:
-    # Replace infinite values with NaN 
     X = X.replace([np.inf, -np.inf], np.nan)
-    # NaN values with the median of each column
     return X.fillna(X.median())  
-
-
-################################################################################################
-# Load in Data and Form CV sets
-################################################################################################
 
 
 data_path: Path = Path(kagglehub.dataset_download("xiaojiu1414/digix-global-ai-challenge"))
 
-# Load the full dataset
 training_data = load_data(
     feeds_path=data_path / "train" / "train_data_feeds.csv",
     ads_path=data_path / "train" / "train_data_ads.csv"
@@ -87,27 +75,20 @@ training_data = load_data(
 
 small_data = training_data.sample(frac=0.01, random_state=42).reset_index(drop=True)
 
-# Split into training (80%) and test (20%)
 training_data, test_data = train_test_split(small_data, test_size=0.2, random_state=42)
-
-# Further split training into training (80%) and validation (20%)
 training_data, validation_data = train_test_split(training_data, test_size=0.2, random_state=42)
 
 
 numeric_features = training_data.select_dtypes(include='number').columns.tolist()
 
-
-# training data
 X_train_numeric = training_data[numeric_features].drop(columns=['label'])
 y_train_numeric = training_data[numeric_features]['label']
 X_train_numeric = clean_numeric_data(X_train_numeric)
 
-# validation data
 X_validation_numeric = validation_data[numeric_features].drop(columns=['label'])
 y_validation_numeric = validation_data[numeric_features]['label']
 X_validation_numeric = clean_numeric_data(X_validation_numeric)
 
-# test data
 X_test_numeric = test_data[numeric_features].drop(columns=['label'])
 y_test_numeric = test_data[numeric_features]['label']
 X_test_numeric = clean_numeric_data(X_test_numeric)
