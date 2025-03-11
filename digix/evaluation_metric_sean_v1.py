@@ -76,16 +76,26 @@ def evaluate_precision_recall_density(original, synthetic, n_neighbors):
     return precision, recall, pr_density
 
 
-def evaluate_privacy(original: pd.DataFrame, synthetic: pd.DataFrame) -> float:
+def evaluate_privacy(original, synthetic):
     """
-    a privacy metric based on the avg nearest neighbor distance
-    """
-    nn = NearestNeighbors(n_neighbors=1)
-    nn.fit(original)
-    distances, _ = nn.kneighbors(synthetic)
-    avg_distance = np.mean(distances)
+    mesures privacy using avg Nearest-Neighbour Distance Ratio (NNDR)
     
-    return avg_distance
+    NNDR = distance_to_nearest / distance_to_second_nearest
+    higher values indicate high privacy   
+    """
+    # compare the top 2 closest points
+    nn = NearestNeighbors(n_neighbors=2)
+    nn.fit(original)
+
+    # calculate distsances from point to 2 neighbors
+    distances, _ = nn.kneighbors(synthetic)
+    d1 = distances[:, 0]
+    d2 = distances[:, 1]
+
+    ratios = d1 / (d2 + 1e-9)
+    avg_nndr = ratios.mean()
+    
+    return avg_nndr
 
 
 def evaluate_synthetic_data_quality(original, synthetic):
@@ -129,7 +139,7 @@ print("Propensity Score=", results_smoteknn['propensity_score_auc'])
 print("Precision:", results_smoteknn['precision'])
 print("Recall:", results_smoteknn['recall'])
 print("Precision-Recall Density (F1-like):", results_smoteknn['pr_density'])
-print("Privacy Risk (avg. nearest neighbor distance):", results_smoteknn['privacy_risk_distance'])
+print("Privacy Risk (NNDR):", results_smoteknn['privacy_risk_distance'])
 
 
 
@@ -141,7 +151,7 @@ print("Propensity Score=", results_smotesvm['propensity_score_auc'])
 print("Precision:", results_smotesvm['precision'])
 print("Recall:", results_smotesvm['recall'])
 print("Precision-Recall Density (F1-like):", results_smotesvm['pr_density'])
-print("Privacy Risk (avg. nearest neighbor distance):", results_smotesvm['privacy_risk_distance'])
+print("Privacy Risk (NNDR):", results_smotesvm['privacy_risk_distance'])
 
 
 
@@ -155,7 +165,7 @@ print("Propensity Score=", results_smotegmm['propensity_score_auc'])
 print("Precision:", results_smotegmm['precision'])
 print("Recall:", results_smotegmm['recall'])
 print("Precision-Recall Density (F1-like):", results_smotegmm['pr_density'])
-print("Privacy Risk (avg. nearest neighbor distance):", results_smotegmm['privacy_risk_distance'])
+print("Privacy Risk (NNDR):", results_smotegmm['privacy_risk_distance'])
 
 
 
