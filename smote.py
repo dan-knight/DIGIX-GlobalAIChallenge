@@ -1,4 +1,4 @@
-
+import numpy as np
 from imblearn.over_sampling import SMOTE
 from imblearn.over_sampling import SVMSMOTE
 from sklearn.mixture import GaussianMixture
