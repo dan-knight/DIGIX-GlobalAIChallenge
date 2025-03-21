@@ -10,7 +10,10 @@ from sklearn.neighbors import NearestNeighbors
 import scipy.stats as stats
 
 
-def evaluate_propensity_score(original, synthetic):
+def evaluate_propensity_score(
+    original: "pd.DataFrame",
+    synthetic: "pd.DataFrame"
+) -> float:
     """
     trains model to distinguish original data from synthetic
     Returns the propensity score (ROC AUC) score
@@ -31,7 +34,6 @@ def evaluate_propensity_score(original, synthetic):
         X, y, test_size=0.3, random_state=42, stratify=y
     )
 
-    # model
     clf = LogisticRegression(max_iter=1000)
     clf.fit(X_train, y_train)
 
@@ -41,21 +43,23 @@ def evaluate_propensity_score(original, synthetic):
 
     return auc_score
 
-def evaluate_precision_recall_density(original, synthetic, n_neighbors):
+
+def evaluate_precision_recall_density(
+    original: "pd.DataFrame",
+    synthetic: "pd.DataFrame",
+    n_neighbors: int
+) -> tuple[float, float, float]:
     """
     Calculates:
     - Precision: prop of synthetic points within threshold that's derived from original df
     - Recall: prop of original points within threshold from any synthetic point
     Returns precision, recall, and PRD - which is the harmonic mean of precision and recall
     """
-    # 1. Fit KNN on original df
     nn_orig = NearestNeighbors(n_neighbors=n_neighbors)
     nn_orig.fit(original)
 
-    # 2. For each synthetic sample, find distances to knn in original df
     distances_synth, _ = nn_orig.kneighbors(synthetic)
 
-    # 3. Calc threshold from the dist of distances within the original df
     nn_orig_orig = NearestNeighbors(n_neighbors=n_neighbors)
     nn_orig_orig.fit(original)
     distances_orig, _ = nn_orig_orig.kneighbors(original)
@@ -64,30 +68,26 @@ def evaluate_precision_recall_density(original, synthetic, n_neighbors):
 
     precision = np.mean(np.min(distances_synth, axis=1) <= threshold)
 
-    # calc if there's a synthetic obs within the threshold
     nn_synth = NearestNeighbors(n_neighbors=n_neighbors)
     nn_synth.fit(synthetic)
     distances_orig_to_synth, _ = nn_synth.kneighbors(original)
     recall = np.mean(np.min(distances_orig_to_synth, axis=1) <= threshold)
 
-    # calc PRD
     pr_density = 2 * (precision * recall) / (precision + recall + 1e-9)
 
     return precision, recall, pr_density
 
 
-def evaluate_privacy(original, synthetic):
+def evaluate_privacy(original: "pd.DataFrame", synthetic: "pd.DataFrame") -> float:
     """
     mesures privacy using avg Nearest-Neighbour Distance Ratio (NNDR)
     
     NNDR = distance_to_nearest / distance_to_second_nearest
     higher values indicate high privacy   
     """
-    # compare the top 2 closest points
     nn = NearestNeighbors(n_neighbors=2)
     nn.fit(original)
 
-    # calculate distsances from point to 2 neighbors
     distances, _ = nn.kneighbors(synthetic)
     d1 = distances[:, 0]
     d2 = distances[:, 1]
@@ -98,7 +98,10 @@ def evaluate_privacy(original, synthetic):
     return avg_nndr
 
 
-def evaluate_synthetic_data_quality(original, synthetic):
+def evaluate_synthetic_data_quality(
+    original: "pd.DataFrame",
+    synthetic: "pd.DataFrame"
+) -> dict[str, float]:
     """
     Calculates:
       1. Propensity score (ROC AUC)
@@ -121,70 +124,3 @@ def evaluate_synthetic_data_quality(original, synthetic):
     }
 
     return results
-
-
-
-##############################################################################################
-# Input original and synthetic data sets - numeric only
-##############################################################################################
-
-original_data = pd.concat([X_train_numeric, y_train_numeric], axis=1)
-
-
-# SMOTE KNN
-synthetic_data = pd.concat([X_train_resampled_knn, y_train_resampled_knn], axis=1)
-results_smoteknn = evaluate_synthetic_data_quality(original_data, synthetic_data)
-
-print("Propensity Score=", results_smoteknn['propensity_score_auc'])
-print("Precision:", results_smoteknn['precision'])
-print("Recall:", results_smoteknn['recall'])
-print("Precision-Recall Density (F1-like):", results_smoteknn['pr_density'])
-print("Privacy Risk (NNDR):", results_smoteknn['privacy_risk_distance'])
-
-
-
-# SMOTE SVM
-synthetic_data = pd.concat([X_train_resampled_svm, y_train_resampled_svm], axis=1)
-results_smotesvm = evaluate_synthetic_data_quality(original_data, synthetic_data)
-
-print("Propensity Score=", results_smotesvm['propensity_score_auc'])
-print("Precision:", results_smotesvm['precision'])
-print("Recall:", results_smotesvm['recall'])
-print("Precision-Recall Density (F1-like):", results_smotesvm['pr_density'])
-print("Privacy Risk (NNDR):", results_smotesvm['privacy_risk_distance'])
-
-
-
-# SMOTE GMM
-synthetic_data = pd.concat([pd.DataFrame(X_train_resampled_gmm), pd.DataFrame(y_train_resampled_gmm)], axis=1)
-synthetic_data.columns = original_data.columns
-
-results_smotegmm = evaluate_synthetic_data_quality(original_data, synthetic_data)
-
-print("Propensity Score=", results_smotegmm['propensity_score_auc'])
-print("Precision:", results_smotegmm['precision'])
-print("Recall:", results_smotegmm['recall'])
-print("Precision-Recall Density (F1-like):", results_smotegmm['pr_density'])
-print("Privacy Risk (NNDR):", results_smotegmm['privacy_risk_distance'])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
