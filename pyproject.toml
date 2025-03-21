@@ -11,8 +11,10 @@ description = "Deep learning methods for understanding soccer tracking data"
 dependencies = [
     "pandas == 2.2.3",
     "torch == 2.6.0",
+    "imblearn == 0.0",
     "scikit-learn == 1.6.1",
     "matplotlib == 3.10.1",
+    "seaborn == 0.13.2",
     "kagglehub == 0.3.10"
 ]
 readme = "README.md"
